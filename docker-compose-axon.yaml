@@ -1,0 +1,24 @@
+version: "3.5"
+services:
+  axon-server:
+    image: axoniq/axonserver
+    ports:
+      - "8024:8024"
+      - "8124:8124"
+    networks:
+      - network0
+
+  # Data store (For read-model Only)
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: mysql
+      TZ: 'Asia/Tokyo'
+    ports:
+      - "3306:3306"
+
+networks:
+  network0:

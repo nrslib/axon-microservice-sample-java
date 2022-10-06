@@ -1,0 +1,347 @@
+version: "3.5"
+services:
+  ## Kafka 0 ==========
+  zookeeper-0:
+    image: wurstmeister/zookeeper
+    ports:
+      - 2181:2181
+    networks:
+      - network0
+
+  kafka-0:
+    image: wurstmeister/kafka
+    ports:
+      - 9092:9092
+      - 29092:29092
+    depends_on:
+      - zookeeper-0
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_PORT: 9092
+      KAFKA_LISTENERS:
+        INTERNAL://:9092,
+        EXTERNAL://:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:
+        INTERNAL:PLAINTEXT,
+        EXTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_HOST_NAME: kafka-0
+      KAFKA_ADVERTISED_LISTENERS:
+        INTERNAL://kafka-0:9092,
+        EXTERNAL://localhost:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-0:2181
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    command:
+      - /bin/bash
+      - -c
+      - |
+        start-kafka.sh &
+        
+        cat <<EOS > /opt/kafka/config/mirror-maker.properties
+        clusters = order,payment,warehouse
+
+        replication.factor=1
+
+        order.bootstrap.servers = kafka-0:9092
+        payment.bootstrap.servers = kafka-2:9092
+        warehouse.bootstrap.servers = kafka-1:9092
+
+        checkpoints.topic.replication.factor=1
+        heartbeats.topic.replication.factor=1
+        offset-syncs.topic.replication.factor=1
+
+        offset.storage.replication.factor=1
+        status.storage.replication.factor=1
+        config.storage.replication.factor=1
+
+        # Payment
+        payment->order.enabled=true
+        payment->order.topics = .*
+
+        # Warehouse
+        warehouse->order.enabled=true
+        warehouse->order.topics = .*
+        EOS
+        
+        # Check topics is created
+        echo 'check topic'
+        cat <<'EOS' > /opt/kafka/bin/wait.sh
+        while :
+        do
+          set +e
+          result=`/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-2:9092 --describe --topic axon-payment-topic`
+          set -e
+          if [[ "$$result" == *Error* ]];then
+            sleep 1
+          else
+            break
+          fi
+        done
+        EOS
+        chmod 755 ./opt/kafka/bin/wait.sh
+        ./opt/kafka/bin/wait.sh
+        # rm ./opt/kafka/bin/wait.sh
+        
+        echo "Topics OK!"
+        ./opt/kafka/bin/connect-mirror-maker.sh ./opt/kafka/config/mirror-maker.properties
+    networks:
+      - network0
+
+  kafka-rest-0:
+    image: nodefluent/kafka-rest
+    ports:
+      - 8083:8083
+    depends_on:
+      - kafka-0
+      - zookeeper-0
+    environment:
+      DEBUG: "*"
+      KAFKA_REST_DEBUG: "all"
+      KAFKA_REST_HTTP_PORT: 8083
+      KAFKA_REST_CONSUMER_METADATA_BROKER_LIST: "kafka-0:9092"
+      KAFKA_REST_PRODUCER_METADATA_BROKER_LIST: "kafka-0:9092"
+    networks:
+      - network0
+
+  kafka-rest-ui-0:
+    image: nodefluent/kafka-rest-ui
+    ports:
+      - 8000:8000
+    depends_on:
+      - kafka-rest
+    environment:
+      DEBUG: "*"
+      REACT_APP_KAFKA_REST_URL: "http://kafka-rest-0:8083/"
+      REACT_APP_TIMEOUT: "3000"
+      PROXY: "yes"
+      BASIC_AUTH_USER: "admin"
+      BASIC_AUTH_PASSWORD: "admin"
+    networks:
+      - network0
+
+  ## Kafka 1 ==========
+  zookeeper-1:
+    image: wurstmeister/zookeeper
+    ports:
+      - 12181:2181
+    networks:
+      - network0
+
+  kafka-1:
+    image: wurstmeister/kafka
+    ports:
+      - 9192:9092
+      - 29192:29092
+    depends_on:
+      - zookeeper-1
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_PORT: 9092
+      KAFKA_LISTENERS:
+        INTERNAL://:9092,
+        EXTERNAL://:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:
+        INTERNAL:PLAINTEXT,
+        EXTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_HOST_NAME: kafka-1
+      KAFKA_ADVERTISED_LISTENERS:
+        INTERNAL://kafka-1:9092,
+        EXTERNAL://localhost:29192
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:2181
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    networks:
+      - network0
+
+  kafka-rest-1:
+    image: nodefluent/kafka-rest
+    ports:
+      - 8183:8083
+    depends_on:
+      - kafka-1
+      - zookeeper-1
+    environment:
+      DEBUG: "*"
+      KAFKA_REST_DEBUG: "all"
+      KAFKA_REST_HTTP_PORT: 8083
+      KAFKA_REST_CONSUMER_METADATA_BROKER_LIST: "kafka-1:9092"
+      KAFKA_REST_PRODUCER_METADATA_BROKER_LIST: "kafka-1:9092"
+    networks:
+      - network0
+
+  kafka-rest-ui-1:
+    image: nodefluent/kafka-rest-ui
+    ports:
+      - 8001:8000
+    depends_on:
+      - kafka-rest-1
+    environment:
+      DEBUG: "*"
+      REACT_APP_KAFKA_REST_URL: "http://kafka-rest-1:8083/"
+      REACT_APP_TIMEOUT: "3000"
+      PROXY: "yes"
+      BASIC_AUTH_USER: "admin"
+      BASIC_AUTH_PASSWORD: "admin"
+    networks:
+      - network0
+
+  ## Kafka 2 ==========
+  zookeeper-2:
+    image: wurstmeister/zookeeper
+    ports:
+      - 22181:2181
+    networks:
+      - network0
+
+  kafka-2:
+    image: wurstmeister/kafka
+    ports:
+      - 9292:9092
+      - 29292:29092
+    depends_on:
+      - zookeeper-2
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_PORT: 9092
+      KAFKA_LISTENERS:
+        INTERNAL://:9092,
+        EXTERNAL://:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:
+        INTERNAL:PLAINTEXT,
+        EXTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_HOST_NAME: kafka-2
+      KAFKA_ADVERTISED_LISTENERS:
+        INTERNAL://kafka-2:9092,
+        EXTERNAL://localhost:29292
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-2:2181
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    networks:
+      - network0
+
+  kafka-rest-2:
+    image: nodefluent/kafka-rest
+    ports:
+      - 8283:8083
+    depends_on:
+      - kafka-2
+      - zookeeper
+    environment:
+      DEBUG: "*"
+      KAFKA_REST_DEBUG: "all"
+      KAFKA_REST_HTTP_PORT: 8083
+      KAFKA_REST_CONSUMER_METADATA_BROKER_LIST: "kafka-2:9092"
+      KAFKA_REST_PRODUCER_METADATA_BROKER_LIST: "kafka-2:9092"
+    networks:
+      - network0
+
+  kafka-rest-ui-2:
+    image: nodefluent/kafka-rest-ui
+    ports:
+      - 8002:8000
+    depends_on:
+      - kafka-rest-2
+    environment:
+      DEBUG: "*"
+      REACT_APP_KAFKA_REST_URL: "http://kafka-rest-2:8083/"
+      REACT_APP_TIMEOUT: "3000"
+      PROXY: "yes"
+      BASIC_AUTH_USER: "admin"
+      BASIC_AUTH_PASSWORD: "admin"
+    networks:
+      - network0
+
+  ## Initialize Kafka
+  init-kafka:
+    image: confluentinc/cp-kafka
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+    entrypoint: [ '/bin/bash', '-c']
+    command: |
+      "
+      # Blocks until kafka is reachable
+      echo 'checking kafka-0'
+      cat <<EOS > wait.sh
+      while :
+      do
+        kafka-topics --bootstrap-server kafka-0:9092 --list
+        if [ "$$?" = "0" ]; then
+          echo 'ok'
+          break
+        fi
+        echo 'sleeping'
+        sleep 1
+      done
+      EOS
+      
+      chmod 755 ./wait.sh
+      ./wait.sh 
+      rm ./wait.sh
+      
+      echo 'checking kafka-1'
+      cat <<EOS > wait.sh
+      while :
+      do
+        kafka-topics --bootstrap-server kafka-1:9092 --list
+        if [ "$$?" = "0" ]; then
+          echo 'ok'
+          break
+        fi
+        echo 'sleeping'
+        sleep 1
+      done
+      EOS
+      
+      chmod 755 ./wait.sh
+      ./wait.sh 
+      rm ./wait.sh
+      
+      echo 'check kafka-2'
+      cat <<EOS > wait.sh
+      while :
+      do
+        kafka-topics --bootstrap-server kafka-2:9092 --list
+        if [ "$$?" = "0" ]; then
+          echo 'ok'
+          break
+        fi
+        echo 'sleeping'
+        sleep 1
+      done
+      EOS
+      
+      chmod 755 ./wait.sh
+      ./wait.sh 
+      rm ./wait.sh
+
+      echo -e 'Creating kafka topics'
+      kafka-topics --bootstrap-server kafka-0:9092 --topic axon-order-topic --create --if-not-exists --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka-0:9092 --topic warehouse.axon-warehouse-topic --create --if-not-exists --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka-0:9092 --topic payment.axon-payment-topic --create --if-not-exists --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka-1:9092 --topic axon-warehouse-topic --create --if-not-exists --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka-2:9092 --topic axon-payment-topic --create --if-not-exists --replication-factor 1 --partitions 1
+
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka-0:9092 --list
+      kafka-topics --bootstrap-server kafka-1:9092 --list
+      kafka-topics --bootstrap-server kafka-2:9092 --list
+      "
+    networks:
+      - network0
+
+  # Data store
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: mysql
+      TZ: 'Asia/Tokyo'
+    ports:
+      - "3306:3306"
+
+networks:
+  network0:

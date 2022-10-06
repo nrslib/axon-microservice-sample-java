@@ -1,0 +1,336 @@
+version: "3.5"
+services:
+  ## Kafka 0 ==========
+  zookeeper-0:
+    image: bitnami/zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - network0
+
+  kafka-0:
+    image: bitnami/kafka
+    hostname: kafka-0
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    depends_on:
+      - zookeeper-0
+    environment:
+      - KAFKA_ADVERTISED_HOST_NAME=kafka-0
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-0:9092,PLAINTEXT_HOST://localhost:29092
+      - KAFKA_CFG_BROKER_ID=0
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:29092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-0:2181
+    command:
+      - /bin/bash
+      - -c
+      - |
+        /opt/bitnami/scripts/kafka/run.sh &
+        
+        cat <<EOS > /opt/bitnami/kafka/config/mirror-maker.properties
+        clusters = order,payment,warehouse
+
+        replication.factor=1
+
+        order.bootstrap.servers = kafka-0:9092
+        payment.bootstrap.servers = kafka-2:9092
+        warehouse.bootstrap.servers = kafka-1:9092
+
+        checkpoints.topic.replication.factor=1
+        heartbeats.topic.replication.factor=1
+        offset-syncs.topic.replication.factor=1
+
+        offset.storage.replication.factor=1
+        status.storage.replication.factor=1
+        config.storage.replication.factor=1
+
+        # Payment
+        payment->order.enabled=true
+        payment->order.topics = .*
+
+        # Warehouse
+        warehouse->order.enabled=true
+        warehouse->order.topics = .*
+        EOS
+        
+        # Check topics is created
+        echo 'check topic'
+        cat <<'EOS' > /opt/bitnami/kafka/bin/wait.sh
+        while :
+        do
+          set +e
+          echo 'call kafka-topics --describe --topic axon-payment-topic'
+          result=`/opt/bitnami/kafka/bin/kafka-topics.sh --bootstrap-server kafka-2:9092 --describe --topic axon-payment-topic`
+          set -e
+          if [[ "$$result" == *Error* ]];then
+            echo 'sleeping'
+            sleep 1
+          else
+            echo 'topic ok'
+            break
+          fi
+        done
+        EOS
+        chmod 755 ./opt/bitnami/kafka/bin/wait.sh
+        ./opt/bitnami/kafka/bin/wait.sh
+        # rm ./opt/bitnami/kafka/bin/wait.sh
+        
+        echo "Topics OK!"
+        ./opt/bitnami/kafka/bin/connect-mirror-maker.sh ./opt/bitnami/kafka/config/mirror-maker.properties
+    networks:
+      - network0
+
+  kafka-rest-0:
+    image: nodefluent/kafka-rest
+    ports:
+      - "8083:8083"
+    depends_on:
+      - kafka-0
+      - zookeeper-0
+    environment:
+      DEBUG: "*"
+      KAFKA_REST_DEBUG: "all"
+      KAFKA_REST_HTTP_PORT: 8083
+      KAFKA_REST_CONSUMER_METADATA_BROKER_LIST: "kafka-0:9092"
+      KAFKA_REST_PRODUCER_METADATA_BROKER_LIST: "kafka-0:9092"
+    networks:
+      - network0
+
+  kafka-rest-ui-0:
+    image: nodefluent/kafka-rest-ui
+    ports:
+      - "8000:8000"
+    depends_on:
+      - kafka-rest
+    environment:
+      DEBUG: "*"
+      REACT_APP_KAFKA_REST_URL: "http://kafka-rest-0:8083/"
+      REACT_APP_TIMEOUT: "3000"
+      PROXY: "yes"
+      BASIC_AUTH_USER: "admin"
+      BASIC_AUTH_PASSWORD: "admin"
+    networks:
+      - network0
+
+  ## Kafka 1 ==========
+  zookeeper-1:
+    image: bitnami/zookeeper
+    ports:
+      - "12181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - network0
+
+  kafka-1:
+    image: bitnami/kafka
+    hostname: kafka-1
+    ports:
+      - "9192:9092"
+      - "29192:29092"
+    depends_on:
+      - zookeeper-1
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-1:9092,PLAINTEXT_HOST://localhost:29192
+      - KAFKA_CFG_BROKER_ID=0
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:29092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-1:2181
+    networks:
+      - network0
+
+  kafka-rest-1:
+    image: nodefluent/kafka-rest
+    ports:
+      - "8183:8083"
+    depends_on:
+      - kafka-1
+      - zookeeper-1
+    environment:
+      DEBUG: "*"
+      KAFKA_REST_DEBUG: "all"
+      KAFKA_REST_HTTP_PORT: 8083
+      KAFKA_REST_CONSUMER_METADATA_BROKER_LIST: "kafka-1:9092"
+      KAFKA_REST_PRODUCER_METADATA_BROKER_LIST: "kafka-1:9092"
+    networks:
+      - network0
+
+  kafka-rest-ui-1:
+    image: nodefluent/kafka-rest-ui
+    ports:
+      - "8001:8000"
+    depends_on:
+      - kafka-rest-1
+    environment:
+      DEBUG: "*"
+      REACT_APP_KAFKA_REST_URL: "http://kafka-rest-1:8083/"
+      REACT_APP_TIMEOUT: "3000"
+      PROXY: "yes"
+      BASIC_AUTH_USER: "admin"
+      BASIC_AUTH_PASSWORD: "admin"
+    networks:
+      - network0
+
+  ## Kafka 2 ==========
+  zookeeper-2:
+    image: bitnami/zookeeper
+    ports:
+      - "22181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - network0
+
+  kafka-2:
+    image: bitnami/kafka
+    hostname: kafka-2
+    ports:
+      - "9292:9092"
+      - "29292:29092"
+    depends_on:
+      - zookeeper-2
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-2:9092,PLAINTEXT_HOST://localhost:29292
+      - KAFKA_CFG_BROKER_ID=0
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:29092
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-2:2181
+    networks:
+      - network0
+
+  kafka-rest-2:
+    image: nodefluent/kafka-rest
+    ports:
+      - "8283:8083"
+    depends_on:
+      - kafka-2
+      - zookeeper
+    environment:
+      DEBUG: "*"
+      KAFKA_REST_DEBUG: "all"
+      KAFKA_REST_HTTP_PORT: 8083
+      KAFKA_REST_CONSUMER_METADATA_BROKER_LIST: "kafka-2:9092"
+      KAFKA_REST_PRODUCER_METADATA_BROKER_LIST: "kafka-2:9092"
+    networks:
+      - network0
+
+  kafka-rest-ui-2:
+    image: nodefluent/kafka-rest-ui
+    ports:
+      - "8002:8000"
+    depends_on:
+      - kafka-rest-2
+    environment:
+      DEBUG: "*"
+      REACT_APP_KAFKA_REST_URL: "http://kafka-rest-2:8083/"
+      REACT_APP_TIMEOUT: "3000"
+      PROXY: "yes"
+      BASIC_AUTH_USER: "admin"
+      BASIC_AUTH_PASSWORD: "admin"
+    networks:
+      - network0
+
+  ## Initialize Kafka
+  init-kafka:
+    image: confluentinc/cp-kafka
+    depends_on:
+      - kafka-0
+      - kafka-1
+      - kafka-2
+    entrypoint: [ '/bin/bash', '-c']
+    command: |
+      "
+      # Blocks until kafka is reachable
+      echo 'checking kafka-0'
+      cat <<EOS > wait.sh
+      while :
+      do
+        echo 'call kafka-topics --list'
+        kafka-topics --bootstrap-server kafka-0:9092 --list
+        if [ "$$?" = "0" ]; then
+          echo 'ok'
+          break
+        fi
+        echo 'sleeping'
+        sleep 1
+      done
+      EOS
+      
+      chmod 755 ./wait.sh
+      ./wait.sh 
+      rm ./wait.sh
+      
+      echo 'checking kafka-1'
+      cat <<EOS > wait.sh
+      while :
+      do
+        echo 'call kafka-topics --list'
+        kafka-topics --bootstrap-server kafka-1:9092 --list
+        if [ "$$?" = "0" ]; then
+          echo 'ok'
+          break
+        fi
+        echo 'sleeping'
+        sleep 1
+      done
+      EOS
+      
+      chmod 755 ./wait.sh
+      ./wait.sh 
+      rm ./wait.sh
+      
+      echo 'check kafka-2'
+      cat <<EOS > wait.sh
+      while :
+      do
+        echo 'call kafka-topics --list'
+        kafka-topics --bootstrap-server kafka-2:9092 --list
+        if [ "$$?" = "0" ]; then
+          echo 'ok'
+          break
+        fi
+        echo 'sleeping'
+        sleep 1
+      done
+      EOS
+      
+      chmod 755 ./wait.sh
+      ./wait.sh 
+      rm ./wait.sh
+
+      echo -e 'Creating kafka topics'
+      kafka-topics --bootstrap-server kafka-0:9092 --topic axon-order-topic --create --if-not-exists --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka-0:9092 --topic warehouse.axon-warehouse-topic --create --if-not-exists --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka-0:9092 --topic payment.axon-payment-topic --create --if-not-exists --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka-1:9092 --topic axon-warehouse-topic --create --if-not-exists --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka-2:9092 --topic axon-payment-topic --create --if-not-exists --replication-factor 1 --partitions 1
+
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka-0:9092 --list
+      kafka-topics --bootstrap-server kafka-1:9092 --list
+      kafka-topics --bootstrap-server kafka-2:9092 --list
+      "
+    networks:
+      - network0
+
+  # Data store
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: mysql
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: mysql
+      TZ: 'Asia/Tokyo'
+    ports:
+      - "3306:3306"
+
+networks:
+  network0:
