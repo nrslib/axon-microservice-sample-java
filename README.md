@@ -46,6 +46,11 @@ And set JVM parameter and set password to kafka_jaas.conf
 ```
 
 ### Warehouse Service
+
+#### URL
+- Swagger: http://localhost:8180/swagger-ui/index.html
+- h2-console: http://localhost:8180/h2-console
+
 #### Env
 - in memory
 ```

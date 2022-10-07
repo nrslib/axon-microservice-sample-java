@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:test
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+axon:
+  axonserver:
+    enabled: false
+  kafka:
+    client-id: warehouse-command-service
+    producer:
+      retries: 0
+    consumer:
+      event-processor-mode: tracking
+    properties:
+      sasl.mechanism: SCRAM-SHA-512
+      security.protocol: SASL_SSL
+      ssl.truststore.location: { AXON_KAFKA_PROPERTIES_SSL_TRUSTSTORE_LOCATION:C:\Program Files\JetBrains\IntelliJ IDEA 2021.3.2\jbr\lib\security\cacerts }
+    default-topic: axon-warehouse-topic
+    bootstrap-servers: localhost:9096
+application:
+  kafka:
+    topics: axon-order-topic,axon-payment-topic,axon-warehouse-topic

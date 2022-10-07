@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${SPRING_DATASOURCE_HOST}:${SPRING_DATASOURCE_PORT:3306}/${SPRING_DATASOURCE_DATABASE}?createDatabaseIfNotExist=true
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database: mysql
+axon:
+  axonserver:
+    enabled: false
+  kafka:
+    client-id: warehouse-command-service
+    producer:
+      retries: 0
+    consumer:
+      event-processor-mode: tracking
+    properties:
+      security.protocol: PLAINTEXT
+    default-topic: axon-warehouse-topic
+    bootstrap-servers: localhost:29192
+application:
+  kafka:
+    topics: axon-warehouse-topic

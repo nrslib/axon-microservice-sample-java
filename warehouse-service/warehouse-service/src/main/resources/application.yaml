@@ -1,0 +1,16 @@
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:inmem}
+springdoc:
+  packages-to-scan: com.example
+  paths-to-match: "/api/**"
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+server:
+  port: ${SERVER_PORT:8180}
+axon:
+  serializer:
+    general: default
+    events: default
+    messages: default
+debug: ${DEBUG:false}

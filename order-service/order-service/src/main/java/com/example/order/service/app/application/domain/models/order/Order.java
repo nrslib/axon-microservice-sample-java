@@ -9,20 +9,6 @@ import lombok.Getter;
 @Getter
 @EqualsAndHashCode
 public class Order implements EventDrivenAggregateRoot<OrderEvents.Event> {
-    public static OrderEvents.OrderIssued create(OrderId orderId, String accountId) {
-        return new OrderEvents.OrderIssued(
-                orderId,
-                accountId
-        );
-    }
-
-    public static Order applyEvent(OrderEvents.OrderIssued event) {
-        return new Order(
-                event.getOrderId(),
-                event.getAccountId()
-        );
-    }
-
     private final OrderId orderId;
     private final String accountId;
 
@@ -30,7 +16,18 @@ public class Order implements EventDrivenAggregateRoot<OrderEvents.Event> {
         this.orderId = orderId;
         this.accountId = accountId;
     }
-
+    public static OrderEvents.OrderIssued create(OrderId orderId, String accountId) {
+        return new OrderEvents.OrderIssued(
+                orderId,
+                accountId
+        );
+    }
+    public static Order applyEvent(OrderEvents.OrderIssued event) {
+        return new Order(
+                event.getOrderId(),
+                event.getAccountId()
+        );
+    }
     @Override
     public EventDrivenAggregateRoot<OrderEvents.Event> applyEvent(OrderEvents.Event event) {
         return null;

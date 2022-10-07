@@ -2,13 +2,23 @@ package com.example.order.shared.application.domain.models.order;
 
 import com.example.appkit.application.basic.IdObject;
 import fj.data.Either;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 
 import java.util.UUID;
 
-@Data
+@Getter
+@EqualsAndHashCode
 public class OrderId implements IdObject {
     private final UUID value;
+
+    public OrderId(UUID value) {
+        this.value = value;
+    }
+
+    public OrderId() {
+        this(UUID.randomUUID());
+    }
     public static Either<Exception, OrderId> parseFromString(String rawId) {
         try {
             return Either.right(
@@ -21,15 +31,6 @@ public class OrderId implements IdObject {
         }
 
     }
-
-    public OrderId(UUID value) {
-        this.value = value;
-    }
-
-    public OrderId() {
-        this(UUID.randomUUID());
-    }
-
     @Override
     public String asString() {
         return value.toString();
