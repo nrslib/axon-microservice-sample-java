@@ -19,7 +19,7 @@ axon:
     properties:
       security.protocol: PLAINTEXT
     default-topic: axon-order-topic
-    bootstrap-servers: ec2-35-77-200-13.ap-northeast-1.compute.amazonaws.com:29092
+    bootstrap-servers: localhost:29092,localhost:29192,localhost:29292
 application:
   kafka:
     topics: axon-order-topic,axon-payment-topic,axon-warehouse-topic

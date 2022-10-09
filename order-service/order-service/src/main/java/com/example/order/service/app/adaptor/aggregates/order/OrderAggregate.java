@@ -11,7 +11,7 @@ import org.axonframework.spring.stereotype.Aggregate;
 public class OrderAggregate extends AbstractAggregate<Order, OrderId, OrderEvents.Event> {
     @CommandHandler
     public OrderAggregate(OrderAggregateProtocol.IssueOrder command) {
-        var event = Order.create(command.getOrderId(), command.getAccountId());
+        var event = Order.create(command.getOrderId(), command.getAccountId(), command.getItems());
         apply(event);
     }
     @Override

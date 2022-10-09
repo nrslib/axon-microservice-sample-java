@@ -35,8 +35,9 @@ public class OrderController {
                         Collectors.toMap(
                                 itemAndNr -> ItemId.parseFromString(
                                         itemAndNr.getItemId()).either(error -> {
-                                    throw error;
-                                }, it -> it), ItemAndNr::getNr
+                                            throw error;
+                                        },
+                                        it -> it), ItemAndNr::getNr
                         )
                 );
 
