@@ -4,6 +4,7 @@ import com.example.appkit.application.basic.EventDrivenAggregateRoot;
 import com.example.appkit.application.basic.IdObject;
 import fj.data.Either;
 import org.axonframework.eventsourcing.EventSourcingHandler;
+import org.axonframework.messaging.MetaData;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
 
@@ -12,7 +13,7 @@ import java.util.function.Function;
 public abstract class AbstractAggregate <AggregateRoot extends EventDrivenAggregateRoot<Event>, Id extends IdObject, Event> {
     private AggregateRoot aggregateRoot;
 
-    protected AggregateRoot getAggregate() {
+    public AggregateRoot getAggregate() {
         return aggregateRoot;
     }
 
@@ -45,6 +46,10 @@ public abstract class AbstractAggregate <AggregateRoot extends EventDrivenAggreg
 
     protected void apply(Event event) {
         AggregateLifecycle.apply(event);
+    }
+
+    protected void apply(Event event, MetaData metaData) {
+        AggregateLifecycle.apply(event, metaData);
     }
 
     protected <Error> void applyOrThrow(

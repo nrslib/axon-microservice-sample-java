@@ -1,5 +1,6 @@
 package com.example.order.service.http.models.order.post;
 
+import com.example.order.service.app.adaptor.aggregates.order.commands.issue.OrderPaymentInformation;
 import com.example.order.service.http.valication.constraints.UUID;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -15,4 +16,6 @@ public class OrderPostRequest {
 
     @Valid
     private List<ItemAndNr> items;
+
+    private OrderPaymentInformation paymentInformation;
 }

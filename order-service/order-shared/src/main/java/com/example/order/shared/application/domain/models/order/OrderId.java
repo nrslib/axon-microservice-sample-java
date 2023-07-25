@@ -29,10 +29,15 @@ public class OrderId implements IdObject {
         } catch (Exception ex) {
             throw ex;
         }
-
     }
+
     @Override
     public String asString() {
         return value.toString();
+    }
+
+    @Override
+    public String toString() {
+        return asString();
     }
 }
