@@ -1,6 +1,7 @@
 package com.example.item.shared.domain.models.item;
 
 import com.example.appkit.application.basic.IdObject;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import fj.data.Either;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -9,6 +10,7 @@ import lombok.Getter;
 import java.util.UUID;
 
 @Data
+@JsonTypeInfo(use= JsonTypeInfo.Id.CLASS)
 public class ItemId implements IdObject {
     public static Either<RuntimeException, ItemId> parseFromString(String rawId) {
         try {
@@ -33,5 +35,10 @@ public class ItemId implements IdObject {
     @Override
     public String asString() {
         return value.toString();
+    }
+
+    @Override
+    public String toString() {
+        return asString();
     }
 }

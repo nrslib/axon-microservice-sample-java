@@ -1,6 +1,6 @@
 package com.example.order.service.app.application.projection.order;
 
-import com.example.order.api.domain.models.order.OrderEvents;
+import com.example.order.api.domain.models.order.events.OrderIssued;
 import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.eventhandling.ResetHandler;
 import org.springframework.stereotype.Service;
@@ -19,7 +19,7 @@ public class OrderProjection {
     }
 
     @EventHandler
-    public void on(OrderEvents.OrderIssued event) {
+    public void on(OrderIssued event) {
         var data = new OrderDataModel();
         data.setItemId(event.getOrderId().asString());
         data.setName("test-name");

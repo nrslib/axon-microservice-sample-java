@@ -1,7 +1,6 @@
 package com.example.order.service.http.controller.order;
 
-import com.example.item.shared.domain.models.item.ItemId;
-import com.example.order.service.app.application.interactors.order.issue.OrderIssuerInteractor;
+import com.example.order.service.app.application.interactors.order.issue.OrderIssueInteractor;
 import com.example.order.service.http.models.order.post.ItemAndNr;
 import com.example.order.service.http.models.order.post.OrderPostRequest;
 import com.example.order.service.http.models.order.post.OrderPostResponse;
@@ -12,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Tag(description = "Order API", name = "Order API")
@@ -19,11 +19,11 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/orders")
 public class OrderController {
     private final CommandGateway commandGateway;
-    private final OrderIssuerInteractor issuerInteractor;
+    private final OrderIssueInteractor issueInteractor;
 
-    public OrderController(CommandGateway commandGateway, OrderIssuerInteractor issuerInteractor) {
+    public OrderController(CommandGateway commandGateway, OrderIssueInteractor issueInteractor) {
         this.commandGateway = commandGateway;
-        this.issuerInteractor = issuerInteractor;
+        this.issueInteractor = issueInteractor;
     }
 
     @Operation(summary = "Creating a new order.")
@@ -33,15 +33,10 @@ public class OrderController {
         var items = request.getItems().stream()
                 .collect(
                         Collectors.toMap(
-                                itemAndNr -> ItemId.parseFromString(
-                                        itemAndNr.getItemId()).either(error -> {
-                                            throw error;
-                                        },
-                                        it -> it), ItemAndNr::getNr
-                        )
-                );
+                                itemAndNr -> UUID.fromString(itemAndNr.getItemId()), ItemAndNr::getNr
+                        ));
 
-        var orderId = issuerInteractor.handle(request.getAccountId(), items);
+        var orderId = issueInteractor.handle(request.getAccountId(), items, request.getPaymentInformation());
 
         return new OrderPostResponse(orderId.asString());
     }

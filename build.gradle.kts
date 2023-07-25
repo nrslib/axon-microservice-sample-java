@@ -4,7 +4,7 @@ plugins {
     id("java")
 }
 
-java.sourceCompatibility = JavaVersion.VERSION_11
+java.sourceCompatibility = JavaVersion.VERSION_17
 
 allprojects {
     group = "com.example"
@@ -18,6 +18,9 @@ allprojects {
 
     dependencies {
         implementation("org.functionaljava:functionaljava:5.0")
+        implementation("com.fasterxml.jackson.core:jackson-annotations:2.15.2")
+        implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")
+        implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
         compileOnly("org.projectlombok:lombok:1.18.24")
         annotationProcessor("org.projectlombok:lombok:1.18.24")
     }

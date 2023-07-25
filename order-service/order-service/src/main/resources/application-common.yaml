@@ -1,0 +1,19 @@
+application:
+  services:
+    payment:
+      host: localhost:8280
+    warehouse:
+      host: localhost:8180
+axon:
+  serializer:
+    general: jackson
+    events: jackson
+    messages: jackson
+debug: ${DEBUG:false}
+springdoc:
+  packages-to-scan: com.example
+  paths-to-match: "/api/**"
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+server:
+  port: ${SERVER_PORT:8080}
